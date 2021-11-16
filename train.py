@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import argparse
 import os
+import pdb
 import shutil
 import time
 import random
@@ -361,6 +362,7 @@ def train(args,trainloader,enc, dec,cl,disc_l,disc_v,
         disc_l_l1 = l1.view(l1.size(0),32,3,3)
         disc_l.zero_grad()
         logits_Dl_l1 = disc_l(disc_l_l1)
+                
         logits_Dl_l2 = disc_l(l2)
         dl_logits_DL_l1 = Variable(Tensor(logits_Dl_l1.shape[0], 1).fill_(0.0), requires_grad=False)
         dl_logits_DL_l2 = Variable(Tensor(logits_Dl_l2.shape[0], 1).fill_(1.0), requires_grad=False)
@@ -372,7 +374,8 @@ def train(args,trainloader,enc, dec,cl,disc_l,disc_v,
         
         loss_dl.backward(retain_graph=True)
         optimizer_dl.step()
-
+        # optimizer_dl causes disc_l weights updates. This means that logits_Dl_l1 should be updated
+        # to reflect latest update disc_l_l1 remains unchanged, as it is attached to enc.
 
         logits_Dv_X = disc_v(inputs)
         logits_Dv_l2 = disc_v(dec(l2))
@@ -403,6 +406,9 @@ def train(args,trainloader,enc, dec,cl,disc_l,disc_v,
         out_gv1 = disc_v(dec(l2))
         Xh = dec(l1)
         loss_mse = criterion_ae(Xh,inputs)
+        
+        # update logits_Dl_l1 to reflect previous model update
+        logits_Dl_l1 = disc_l(disc_l_l1)
         ones_logits_Dl_l1 = Variable(Tensor(logits_Dl_l1.shape[0], 1).fill_(1.0), requires_grad=False)
  
         loss_AE_l = criterion_ce(logits_Dl_l1,ones_logits_Dl_l1)
